@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Face Recognition Attendance System</title>
+
+    <!-- FaceAPI -->
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f2f6fa;
+            color: #222;
+        }
+
+        header {
+            background: #1d4ed8;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        header p {
+            margin: 8px 0 0;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1100px;
+            margin: 25px auto;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #1d4ed8;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        input {
+            padding: 12px;
+            border: 1px solid #bbb;
+            border-radius: 6px;
+            font-size: 16px;
+            flex: 1;
+            min-width: 180px;
+        }
+
+        button {
+            border: none;
+            border-radius: 6px;
+            padding: 12px 18px;
+            font-size: 15px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        .primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .success {
+            background: #16a34a;
+            color: white;
+        }
+
+        .danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .secondary {
+            background: #64748b;
+            color: white;
+        }
+
+        button:hover {
+            opacity: 0.85;
+        }
+
+        .camera-area {
+            text-align: center;
+            position: relative;
+        }
+
+        #video {
+            width: 100%;
+            max-width: 720px;
+            border-radius: 10px;
+            background: black;
+        }
+
+        #overlay {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+            max-width: 720px;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #status {
+            padding: 12px;
+            margin-top: 15px;
+            border-radius: 6px;
+            background: #e0f2fe;
+            color: #075985;
+            font-weight: bold;
+        }
+
+        .student-list {
+            margin-top: 15px;
+        }
+
+        .student-item {
+            padding: 10px;
+            background: #f8fafc;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background: #1d4ed8;
+            color: white;
+        }
+
+        @media(max-width:600px) {
+
+            header h1 {
+                font-size: 22px;
+            }
+
+            button {
+                width: 100%;
+                margin: 4px 0;
+            }
+
+            .form-row {
+                display: block;
+            }
+
+            input {
+                width: 100%;
+                margin-bottom: 8px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<header>
+
+    <h1>Face Recognition Attendance System</h1>
+
+    <p>AI-Based Attendance Using Webcam</p>
+
+</header>
+
+
+<div class="container">
+
+
+    <!-- STUDENT REGISTRATION -->
+
+    <div class="card">
+
+        <h2>1. Register Student</h2>
+
+        <div class="form-row">
+
+            <input
+                type="text"
+                id="studentId"
+                placeholder="Enter Student ID">
+
+            <input
+                type="text"
+                id="studentName"
+                placeholder="Enter Student Name">
+
+        </div>
+
+        <button
+            class="primary"
+            onclick="startCamera()">
+
+            Start Camera
+
+        </button>
+
+
+        <button
+            class="success"
+            onclick="registerStudent()">
+
+            Capture & Register Face
+
+        </button>
+
+    </div>
+
+
+    <!-- CAMERA -->
+
+    <div class="card">
+
+        <h2>2. Camera</h2>
+
+        <div class="camera-area">
+
+            <video
+                id="video"
+                autoplay
+                muted
+                playsinline>
+            </video>
+
+            <canvas id="overlay"></canvas>
+
+        </div>
+
+        <div id="status">
+
+            Click "Start Camera" to begin.
+
+        </div>
+
+    </div>
+
+
+    <!-- ATTENDANCE -->
+
+    <div class="card">
+
+        <h2>3. Take Attendance</h2>
+
+        <button
+            class="primary"
+            onclick="startRecognition()">
+
+            Start Face Recognition
+
+        </button>
+
+        <button
+            class="danger"
+            onclick="stopRecognition()">
+
+            Stop Recognition
+
+        </button>
+
+        <button
+            class="success"
+            onclick="downloadCSV()">
+
+            Download Attendance CSV
+
+        </button>
+
+    </div>
+
+
+    <!-- REGISTERED STUDENTS -->
+
+    <div class="card">
+
+        <h2>Registered Students</h2>
+
+        <div id="studentList"></div>
+
+    </div>
+
+
+    <!-- ATTENDANCE TABLE -->
+
+    <div class="card">
+
+        <h2>Today's Attendance</h2>
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>Date</th>
+                    <th>Time</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody id="attendanceBody">
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+<script>
+
+
+// --------------------------------------------------
+// SETTINGS
+// --------------------------------------------------
+
+const MODEL_URL =
+    "https://cdn.jsdelivr.net/gh/vladmandic/face-api@1.7.12/model";
+
+let video =
+    document.getElementById("video");
+
+let overlay =
+    document.getElementById("overlay");
+
+let statusText =
+    document.getElementById("status");
+
+let stream = null;
+
+let recognitionRunning = false;
+
+let registeredStudents =
+    JSON.parse(
+        localStorage.getItem("registeredStudents")
+    ) || [];
+
+let attendance =
+    JSON.parse(
+        localStorage.getItem("attendance")
+    ) || [];
+
+let labeledDescriptors = [];
+
+let faceMatcher = null;
+
+
+// --------------------------------------------------
+// LOAD MODELS
+// --------------------------------------------------
+
+async function loadModels() {
+
+    statusText.innerText =
+        "Loading AI face recognition models...";
+
+    try {
+
+        await faceapi.nets.tinyFaceDetector.loadFromUri(
+            MODEL_URL
+        );
+
+        await faceapi.nets.faceLandmark68Net.loadFromUri(
+            MODEL_URL
+        );
+
+        await faceapi.nets.faceRecognitionNet.loadFromUri(
+            MODEL_URL
+        );
+
+        statusText.innerText =
+            "AI models loaded successfully.";
+
+        console.log("Models loaded.");
+
+    }
+
+    catch(error) {
+
+        console.error(error);
+
+        statusText.innerText =
+            "Error loading AI models. Check internet connection.";
+
+    }
+
+}
+
+
+// --------------------------------------------------
+// START CAMERA
+// --------------------------------------------------
+
+async function startCamera() {
+
+    try {
+
+        if (!stream) {
+
+            stream =
+                await navigator.mediaDevices.getUserMedia({
+
+                    video: {
+                        width: 720,
+                        height: 560,
+                        facingMode: "user"
+                    },
+
+                    audio: false
+
+                });
+
+            video.srcObject = stream;
+
+        }
+
+        statusText.innerText =
+            "Camera started successfully.";
+
+    }
+
+    catch(error) {
+
+        console.error(error);
+
+        statusText.innerText =
+            "Camera access denied. Please allow camera permission.";
+
+    }
+
+}
+
+
+// --------------------------------------------------
+// REGISTER STUDENT
+// --------------------------------------------------
+
+async function registerStudent() {
+
+    let studentId =
+        document.getElementById("studentId").value.trim();
+
+    let studentName =
+        document.getElementById("studentName").value.trim();
+
+
+    if (!studentId || !studentName) {
+
+        alert(
+            "Please enter Student ID and Student Name."
+        );
+
+        return;
+
+    }
+
+
+    if (!stream) {
+
+        alert(
+            "Please click Start Camera first."
+        );
+
+        return;
+
+    }
+
+
+    statusText.innerText =
+        "Looking for your face...";
+
+
+    const detection =
+        await faceapi.detectSingleFace(
+
+            video,
+
+            new faceapi.TinyFaceDetectorOptions({
+
+                inputSize: 320,
+                scoreThreshold: 0.5
+
+            })
+
+        )
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+
+    if (!detection) {
+
+        statusText.innerText =
+            "No face detected. Please face the camera.";
+
+        return;
+
+    }
+
+
+    // Check duplicate student ID
+
+    let existing =
+        registeredStudents.find(
+            student =>
+                student.id === studentId
+        );
+
+
+    if (existing) {
+
+        alert(
+            "This Student ID is already registered."
+        );
+
+        return;
+
+    }
+
+
+    let descriptor =
+        Array.from(
+            detection.descriptor
+        );
+
+
+    registeredStudents.push({
+
+        id: studentId,
+
+        name: studentName,
+
+        descriptor: descriptor
+
+    });
+
+
+    localStorage.setItem(
+
+        "registeredStudents",
+
+        JSON.stringify(
+            registeredStudents
+        )
+
+    );
+
+
+    statusText.innerText =
+        `${studentName} registered successfully!`;
+
+
+    document.getElementById(
+        "studentId"
+    ).value = "";
+
+    document.getElementById(
+        "studentName"
+    ).value = "";
+
+
+    updateStudentList();
+
+    buildFaceMatcher();
+
+}
+
+
+// --------------------------------------------------
+// BUILD FACE MATCHER
+// --------------------------------------------------
+
+function buildFaceMatcher() {
+
+    if (
+        registeredStudents.length === 0
+    ) {
+
+        faceMatcher = null;
+
+        return;
+
+    }
+
+
+    labeledDescriptors =
+        registeredStudents.map(student => {
+
+            return new faceapi.LabeledFaceDescriptors(
+
+                student.id,
+
+                [
+
+                    new Float32Array(
+                        student.descriptor
+                    )
+
+                ]
+
+            );
+
+        });
+
+
+    faceMatcher =
+        new faceapi.FaceMatcher(
+
+            labeledDescriptors,
+
+            0.52
+
+        );
+
+}
+
+
+// --------------------------------------------------
+// START RECOGNITION
+// --------------------------------------------------
+
+async function startRecognition() {
+
+    if (!stream) {
+
+        alert(
+            "Please start the camera first."
+        );
+
+        return;
+
+    }
+
+
+    if (
+        registeredStudents.length === 0
+    ) {
+
+        alert(
+            "Please register at least one student first."
+        );
+
+        return;
+
+    }
+
+
+    buildFaceMatcher();
+
+    recognitionRunning = true;
+
+    statusText.innerText =
+        "Face recognition started...";
+
+
+    recognitionLoop();
+
+}
+
+
+// --------------------------------------------------
+// RECOGNITION LOOP
+// --------------------------------------------------
+
+async function recognitionLoop() {
+
+    if (!recognitionRunning) {
+
+        return;
+
+    }
+
+
+    const detections =
+        await faceapi.detectAllFaces(
+
+            video,
+
+            new faceapi.TinyFaceDetectorOptions({
+
+                inputSize: 320,
+
+                scoreThreshold: 0.5
+
+            })
+
+        )
+        .withFaceLandmarks()
+        .withFaceDescriptors();
+
+
+    const displaySize = {
+
+        width: video.videoWidth,
+
+        height: video.videoHeight
+
+    };
+
+
+    faceapi.matchDimensions(
+
+        overlay,
+
+        displaySize
+
+    );
+
+
+    const resizedDetections =
+        faceapi.resizeResults(
+
+            detections,
+
+            displaySize
+
+        );
+
+
+    const ctx =
+        overlay.getContext("2d");
+
+
+    ctx.clearRect(
+
+        0,
+        0,
+        overlay.width,
+        overlay.height
+
+    );
+
+
+    if (
+        faceMatcher &&
+        resizedDetections.length > 0
+    ) {
+
+        resizedDetections.forEach(
+
+            detection => {
+
+                const box =
+                    detection.detection.box;
+
+
+                const bestMatch =
+                    faceMatcher.findBestMatch(
+
+                        detection.descriptor
+
+                    );
+
+
+                let label =
+                    bestMatch.toString();
+
+
+                let studentId =
+                    bestMatch.label;
+
+
+                let student =
+                    registeredStudents.find(
+
+                        s =>
+                            s.id === studentId
+
+                    );
+
+
+                let displayName =
+                    "Unknown";
+
+
+                if (
+                    student &&
+                    bestMatch.distance < 0.52
+                ) {
+
+                    displayName =
+                        student.name;
+
+
+                    markAttendance(
+
+                        student.id,
+
+                        student.name
+
+                    );
+
+                }
+
+
+                ctx.strokeStyle =
+                    student
+                        ? "green"
+                        : "red";
+
+
+                ctx.lineWidth = 3;
+
+
+                ctx.strokeRect(
+
+                    box.x,
+                    box.y,
+                    box.width,
+                    box.height
+
+                );
+
+
+                ctx.font =
+                    "18px Arial";
+
+
+                ctx.fillStyle =
+                    student
+                        ? "green"
+                        : "red";
+
+
+                ctx.fillText(
+
+                    displayName,
+
+                    box.x,
+
+                    box.y - 10
+
+                );
+
+            }
+
+        );
+
+    }
+
+
+    requestAnimationFrame(
+        recognitionLoop
+    );
+
+}
+
+
+// --------------------------------------------------
+// STOP RECOGNITION
+// --------------------------------------------------
+
+function stopRecognition() {
+
+    recognitionRunning = false;
+
+    statusText.innerText =
+        "Face recognition stopped.";
+
+}
+
+
+// --------------------------------------------------
+// MARK ATTENDANCE
+// --------------------------------------------------
+
+function markAttendance(
+    studentId,
+    studentName
+) {
+
+    const now =
+        new Date();
+
+
+    const date =
+        now.toISOString()
+            .split("T")[0];
+
+
+    const time =
+        now.toLocaleTimeString();
+
+
+    // Prevent duplicate attendance
+    // on the same date
+
+    const alreadyMarked =
+        attendance.some(
+
+            record =>
+
+                record.studentId === studentId &&
+
+                record.date === date
+
+        );
+
+
+    if (alreadyMarked) {
+
+        return;
+
+    }
+
+
+    attendance.push({
+
+        studentId: studentId,
+
+        name: studentName,
+
+        date: date,
+
+        time: time
+
+    });
+
+
+    localStorage.setItem(
+
+        "attendance",
+
+        JSON.stringify(
+            attendance
+        )
+
+    );
+
+
+    statusText.innerText =
+        `Attendance marked for ${studentName}`;
+
+
+    updateAttendanceTable();
+
+}
+
+
+// --------------------------------------------------
+// STUDENT LIST
+// --------------------------------------------------
+
+function updateStudentList() {
+
+    let container =
+        document.getElementById(
+            "studentList"
+        );
+
+
+    container.innerHTML = "";
+
+
+    if (
+        registeredStudents.length === 0
+    ) {
+
+        container.innerHTML =
+            "<p>No students registered.</p>";
+
+        return;
+
+    }
+
+
+    registeredStudents.forEach(
+        student => {
+
+            let div =
+                document.createElement(
+                    "div"
+                );
+
+
+            div.className =
+                "student-item";
+
+
+            div.innerHTML = `
+
+                <span>
+                    ${student.id}
+                </span>
+
+                <strong>
+                    ${student.name}
+                </strong>
+
+            `;
+
+
+            container.appendChild(div);
+
+        }
+    );
+
+}
+
+
+// --------------------------------------------------
+// ATTENDANCE TABLE
+// --------------------------------------------------
+
+function updateAttendanceTable() {
+
+    let tbody =
+        document.getElementById(
+            "attendanceBody"
+        );
+
+
+    tbody.innerHTML = "";
+
+
+    const today =
+        new Date()
+            .toISOString()
+            .split("T")[0];
+
+
+    attendance
+
+        .filter(
+            record =>
+                record.date === today
+        )
+
+        .forEach(
+            record => {
+
+                let row =
+                    document.createElement(
+                        "tr"
+                    );
+
+
+                row.innerHTML = `
+
+                    <td>
+                        ${record.studentId}
+                    </td>
+
+                    <td>
+                        ${record.name}
+                    </td>
+
+                    <td>
+                        ${record.date}
+                    </td>
+
+                    <td>
+                        ${record.time}
+                    </td>
+
+                `;
+
+
+                tbody.appendChild(row);
+
+            }
+        );
+
+}
+
+
+// --------------------------------------------------
+// DOWNLOAD CSV
+// --------------------------------------------------
+
+function downloadCSV() {
+
+    if (
+        attendance.length === 0
+    ) {
+
+        alert(
+            "No attendance records available."
+        );
+
+        return;
+
+    }
+
+
+    let csv =
+        "Student ID,Name,Date,Time\n";
+
+
+    attendance.forEach(
+        record => {
+
+            csv +=
+
+                `"${record.studentId}",` +
+
+                `"${record.name}",` +
+
+                `"${record.date}",` +
+
+                `"${record.time}"\n`;
+
+        }
+    );
+
+
+    const blob =
+        new Blob(
+
+            [csv],
+
+            {
+                type:
+                    "text/csv;charset=utf-8;"
+            }
+
+        );
+
+
+    const url =
+        URL.createObjectURL(blob);
+
+
+    const link =
+        document.createElement("a");
+
+
+    link.href = url;
+
+
+    link.download =
+        "attendance.csv";
+
+
+    document.body.appendChild(link);
+
+
+    link.click();
+
+
+    document.body.removeChild(link);
+
+
+    URL.revokeObjectURL(url);
+
+}
+
+
+// --------------------------------------------------
+// INITIALIZATION
+// --------------------------------------------------
+
+window.addEventListener(
+
+    "load",
+
+    async function() {
+
+        updateStudentList();
+
+        updateAttendanceTable();
+
+        buildFaceMatcher();
+
+        await loadModels();
+
+    }
+
+);
+
+
+</script>
+
+</body>
+
+</html>
